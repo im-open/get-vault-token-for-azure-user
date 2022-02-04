@@ -1,80 +1,70 @@
-# composite-run-steps-action-template
+# get-vault-token-for-azure-user
 
-This template can be used to quickly start a new custom composite-run-steps action repository.  Click the `Use this template` button at the top to get started.
+A GitHub Action for retrieving an authentication token for [HashiCorp Vault](https://www.vaultproject.io/) using [Vault's Azure Auth Method](https://www.vaultproject.io/docs/auth/azure). It can be used in conjunction with [HashiCorp's vault-action](https://github.com/hashicorp/vault-action) to retrieve secrets.
+
+Prerequisites:
+
+1. Azure Auth enabled on the Vault Server.
+2. A logged in Azure user that is able to authenticate as the provided Vault role.
 
 ## Index
 
-- [Inputs](#inputs)
-- [Outputs](#outputs)
-- [Example](#example)
-- [Contributing](#contributing)
-  - [Incrementing the Version](#incrementing-the-version)
-- [Code of Conduct](#code-of-conduct)
-- [License](#license)
-  
-## TODOs
-- Readme
-  - [ ] Update the Inputs section with the correct action inputs
-  - [ ] Update the Outputs section with the correct action outputs
-  - [ ] Update the Example section with the correct usage   
-- action.yml
-  - [ ] Fill in the correct name, description, inputs and outputs and implement steps
-- CODEOWNERS
-  - [ ] Update as appropriate
-- Repository Settings
-  - [ ] On the *Options* tab check the box to *Automatically delete head branches*
-  - [ ] On the *Options* tab update the repository's visibility
-  - [ ] On the *Branches* tab add a branch protection rule
-    - [ ] Check *Require pull request reviews before merging*
-    - [ ] Check *Dismiss stale pull request approvals when new commits are pushed*
-    - [ ] Check *Require review from Code Owners*
-    - [ ] Check *Include Administrators*
-  - [ ] On the *Manage Access* tab add the appropriate groups
-- About Section (accessed on the main page of the repo, click the gear icon to edit)
-  - [ ] The repo should have a short description of what it is for
-  - [ ] Add one of the following topic tags:
-    | Topic Tag       | Usage                                    |
-    | --------------- | ---------------------------------------- |
-    | az              | For actions related to Azure             |
-    | code            | For actions related to building code     |
-    | certs           | For actions related to certificates      |
-    | db              | For actions related to databases         |
-    | git             | For actions related to Git               |
-    | iis             | For actions related to IIS               |
-    | microsoft-teams | For actions related to Microsoft Teams   |
-    | svc             | For actions related to Windows Services  |
-    | jira            | For actions related to Jira              |
-    | meta            | For actions related to running workflows |
-    | pagerduty       | For actions related to PagerDuty         |
-    | test            | For actions related to testing           |
-    | tf              | For actions related to Terraform         |
-  - [ ] Add any additional topics for an action if they apply    
+- [get-vault-token-for-azure-user](#get-vault-token-for-azure-user)
+  - [Index](#index)
+  - [Inputs](#inputs)
+  - [Outputs](#outputs)
+  - [Example](#example)
+  - [Contributing](#contributing)
+    - [Incrementing the Version](#incrementing-the-version)
+  - [Code of Conduct](#code-of-conduct)
+  - [License](#license)
     
 
 ## Inputs
-| Parameter | Is Required | Description           |
-| --------- | ----------- | --------------------- |
-| `input`   | true        | Description goes here |
+| Parameter                          | Is Required | Default | Description                                                                                                        |
+| ---------------------------------- | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| `vault-role`                       | true        | N/A     | The role in Vault that the outputted auth token will be provided for.                                              |
+| `vault-url`                        | true        | N/A     | The base url where Vault is hosted. E.g. https://vault.myvault.com:8200                                            |
+| `azure-auth-mount-path`            | false       | azure   | The path where Vault's Azure Auth Method was mounted. This should be 'azure' unless otherwise configured in Vault. |
+| `output-environment-variable-name` | false       | N/A     | If set, an environment variable with the provided name will be outputted in addition to the normal output.         |
 
 ## Outputs
-| Output   | Description           |
-| -------- | --------------------- |
-| `output` | Description goes here |
+| Output               | Description                                                                     |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `vault_client_token` | A Vault token that can be used in subsequent jobs/steps to interact with Vault. |
 
 ## Example
 
 ```yml
-# TODO: Fill in the correct usage
 jobs:
-  job1:
+  get-vault-secrets:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
-
-      - name: ''
-        uses: im-open/thisrepo@v1.0.0 # TODO: fix the action name
+      - name: AZ Login
+        uses: azure/login@v1
         with:
-          input-1: ''
+          creds: ${{ secrets.AZURE_LOGIN_CREDENTIALS }}
+
+      - name: Get Vault Token
+        id: vault_token
+        uses: im-open/get-vault-token-for-azure-user@v1.0.0
+        with:
+          vault-role: 'my-role'
+          vault-url: 'https://vault.myvault.com:8200'
+          azure-auth-mount-path: 'azure'
+          output-environment-variable-name: 'VAULT_CLIENT_TOKEN'
+
+      
+      - name: Import Secrets
+        id: vault-secrets
+        uses: hashicorp/vault-action@v2.3.1
+        with:
+          url: 'https://vault.myvault.com:8200'
+          token: '${{ steps.vault_token.outputs.client_token }}' # you could also use ${{ env.VAULT_CLIENT_TOKEN }} since output-environment-variable-name is set in the vault_token step
+          secrets: |
+            secret/data/ci/auth-creds username ;
+            secret/data/ci/auth-creds password
+
 ```
 
 ## Contributing
