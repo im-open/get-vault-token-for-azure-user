@@ -20,7 +20,7 @@ inputs:
 outputs:
   vault_client_token:
     description: 'A Vault token that can be used in subsequent jobs/steps to interact with Vault.'
-    value: '${{ steps.vault_login.outputs.client_token }}'
+    value: '${{ steps.vault_login.outputs.vault_client_token }}'
 
 runs:
   using: 'composite'
@@ -40,7 +40,7 @@ runs:
         client_token=$(echo $response | python -c 'import sys, json; print (json.load(sys.stdin)["auth"]["client_token"])')
 
         echo "::add-mask::$client_token"
-        echo "::set-output name=client_token::$client_token"
+        echo "::set-output name=vault_client_token::$client_token"
 
         if [ -n '${{ inputs.output-environment-variable-name }}' ]
         then
