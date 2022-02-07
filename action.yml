@@ -1,22 +1,48 @@
-name: 'Composite Run Steps Action Template'
+name: 'Get Vault auth token using the logged in Azure user'
 
-description: 'Add description here'
+description: "Gets a token that can be used to authenticate with HashiCorp Vault using Vault's Azure Auth Method and the currently logged in Azure user's credentials"
 
 inputs:
-  input-1:
-    description: 'Add a description here'
+  vault-role:
+    description: 'The role in Vault that the outputted auth token will be provided for.'
     required: true
+  vault-url:
+    description: 'The base url where Vault is hosted. E.g. https://vault.myvault.com:8200'
+    required: true
+  azure-auth-mount-path:
+    description: "The path where Vault's Azure Auth Method was mounted."
+    required: false
+    default: 'azure'
+  output-environment-variable-name:
+    description: 'If set, an environment variable with the provided name will be outputted in addition to the normal output.'
+    required: false
 
 outputs:
-  output-1:
-    description: 'Add description here'
-    value: '${{ steps.step_1.outputs.world }}'
+  vault_client_token:
+    description: 'A Vault token that can be used in subsequent jobs/steps to interact with Vault.'
+    value: '${{ steps.vault_login.outputs.vault_client_token }}'
 
 runs:
   using: 'composite'
   steps:
-    - name: Step 1
-      id: step_1
+    - name: Login to Vault
+      id: vault_login
       shell: bash
       run: |
-        echo "::set-output name=hello::world"
+        jwt=$(az account get-access-token --query 'accessToken' --resource 'https://management.azure.com/' -o tsv)
+        echo "::add-mask::$jwt"
+
+        response=$(curl \
+          -X POST \
+          -d "{\"jwt\": \"$jwt\", \"role\": \"${{ inputs.vault-role }}\"}" \
+          ${{ inputs.vault-url }}/v1/auth/${{ inputs.azure-auth-mount-path }}/login)
+
+        client_token=$(echo $response | python -c 'import sys, json; print (json.load(sys.stdin)["auth"]["client_token"])')
+
+        echo "::add-mask::$client_token"
+        echo "::set-output name=vault_client_token::$client_token"
+
+        if [ -n '${{ inputs.output-environment-variable-name }}' ]
+        then
+          echo "${{ inputs.output-environment-variable-name }}=$client_token" >> $GITHUB_ENV 
+        fi
