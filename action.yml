@@ -37,6 +37,8 @@ runs:
           -d "{\"jwt\": \"$jwt\", \"role\": \"${{ inputs.vault-role }}\"}" \
           ${{ inputs.vault-url }}/v1/auth/${{ inputs.azure-auth-mount-path }}/login)
 
+        echo $response
+
         client_token=$(echo $response | python -c 'import sys, json; print (json.load(sys.stdin)["auth"]["client_token"])')
 
         echo "::add-mask::$client_token"
