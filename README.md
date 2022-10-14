@@ -47,7 +47,7 @@ jobs:
 
       - name: Get Vault Token
         id: vault_token
-        uses: im-open/get-vault-token-for-azure-user@v1.0.0
+        uses: im-open/get-vault-token-for-azure-user@v1.0.1
         with:
           vault-role: 'my-role'
           vault-url: 'https://vault.myvault.com:8200'
@@ -57,7 +57,7 @@ jobs:
       
       - name: Import Secrets
         id: vault-secrets
-        uses: hashicorp/vault-action@v2.3.1
+        uses: hashicorp/vault-action@v2.4.0
         with:
           url: 'https://vault.myvault.com:8200'
           token: '${{ steps.vault_token.outputs.client_token }}' # you could also use ${{ env.VAULT_CLIENT_TOKEN }} since output-environment-variable-name is set in the vault_token step
