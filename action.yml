@@ -40,7 +40,7 @@ runs:
         client_token=$(echo $response | python -c 'import sys, json; print (json.load(sys.stdin)["auth"]["client_token"])')
 
         echo "::add-mask::$client_token"
-        echo "::set-output name=vault_client_token::$client_token"
+        echo "vault_client_token=$client_token" >> $GITHUB_OUTPUT
 
         if [ -n '${{ inputs.output-environment-variable-name }}' ]
         then
