@@ -47,7 +47,8 @@ jobs:
 
       - name: Get Vault Token
         id: vault_token
-        uses: im-open/get-vault-token-for-azure-user@v1.1.0
+        # You may also reference just the major or major.minor version
+        uses: im-open/get-vault-token-for-azure-user@v1.1.1
         with:
           vault-role: 'my-role'
           vault-url: 'https://vault.myvault.com:8200'

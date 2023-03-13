@@ -1,6 +1,5 @@
-name: 'Get Vault auth token using the logged in Azure user'
-
-description: "Gets a token that can be used to authenticate with HashiCorp Vault using Vault's Azure Auth Method and the currently logged in Azure user's credentials"
+name: Get Vault auth token using the logged in Azure user
+description: Gets a token that can be used to authenticate with HashiCorp Vault using Vault's Azure Auth Method and the currently logged in Azure user's credentials
 
 inputs:
   vault-role:
