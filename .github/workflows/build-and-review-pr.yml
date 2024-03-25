@@ -60,3 +60,57 @@ jobs:
       # The npm script to run to build the action.  This is typically 'npm run build' if the
       # action needs to be compiled.  For composite-run-steps actions this is typically empty.
       build-command: ''
+
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      ACTION_ORG: ${{ github.repository_owner }}
+      ACTION_NAME: get-vault-token-for-azure-user
+
+      DISPATCH_TYPE: 'get-vault-token-for-azure-user-tests'
+      COMMIT_STATUS_CONTEXT: 'External Tests for SWAT Actions'
+
+      EXTERNAL_ORG: 'im-practices'
+      EXTERNAL_REPO: 'external-tests-for-swat-actions'
+      EXTERNAL_WORKFLOW: 'get-vault-token-for-azure-user-tests.yml'
+
+    steps:
+      - name: Fail test job if fork
+        if: github.event.pull_request.head.repo.fork == true
+        run: |
+          echo "
+          This test job kicks off external tests and requires a GitHub Secret that forks do not have access to.
+          Before this PR can be merged, the tests should be run on an intermediate branch created by repository owners."
+          exit 1
+
+      - name: Create a pending commit status and kick off the external tests
+        if: github.event.pull_request.head.repo.fork == false
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PIPELINE_BOT_PAT }} # Not available to forks
+          script: |
+            // This will add a pending status check to the PR in this repo
+            github.rest.repos.createCommitStatus({
+              owner: '${{ env.ACTION_ORG }}',
+              repo: '${{ env.ACTION_NAME }}',
+              sha: '${{ github.event.pull_request.head.sha }}',
+              context: '${{ env.COMMIT_STATUS_CONTEXT }}',
+              target_url: 'https://github.com/${{ env.EXTERNAL_ORG }}/${{ env.EXTERNAL_REPO }}/actions/workflows/${{ env.EXTERNAL_WORKFLOW }}',
+              state: 'pending',
+              description: 'The external tests have been kicked off'
+            });
+
+            // This will kick off the tests that live in an external repository
+            github.rest.repos.createDispatchEvent({
+              owner: '${{ env.EXTERNAL_ORG }}',
+              repo: '${{ env.EXTERNAL_REPO }}',
+              event_type: '${{ env.DISPATCH_TYPE }}',
+              client_payload: {
+                'action-org': '${{ env.ACTION_ORG }}',
+                'action-name': '${{ env.ACTION_NAME }}',
+                'action-ref': '${{ github.event.pull_request.head.ref }}',
+                'action-sha': '${{ github.event.pull_request.head.sha }}',
+                'commit-status-context': '${{ env.COMMIT_STATUS_CONTEXT }}'
+              }
+            });
